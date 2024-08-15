@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  db:
+    build: ./nawy-db
+    container_name: db
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres_user
+      POSTGRES_PASSWORD: postgres_password
+      POSTGRES_DB: postgres_db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  api:
+    build: ./nawy-api
+    container_name: api
+    ports:
+      - 3000:3000
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://postgres_user:postgres_password@db:5432/postgres_db?schema=public
+    command: >
+      sh -c "
+        npx prisma migrate deploy &&
+        npx ts-node prisma/seed.ts &&
+        node dist/src/main
+      "
+
+  web:
+    build: ./nawy-web
+    ports:
+      - 80:3000
+    depends_on:
+      - api
+
+volumes:
+  db_data:
